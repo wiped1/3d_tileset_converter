@@ -65,8 +65,7 @@ fs.readFile(process.argv[2], {encoding: 'utf-8'}, (err, data) => {
       var child = {};
       child.boundingVolume = {'box': [0,0,0,10,0,0,0,10,0,0,0,10]};
       var meta = JSON.parse(data);
-      child.transform = meta.translation;
-      child.transform = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+      child.transform = meta.transform;
       child.geometricError = 100;
       child.content = {'url': path.join(name, name + '.b3dm')};
 
