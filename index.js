@@ -140,7 +140,9 @@ function convertGlbToB3dm(force) {
       });
     },
     function(err) {
-      console.log(err);
+      if (err) {
+        console.log(err);
+      }
     });
   }); 
 }
