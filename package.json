@@ -9,6 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "cesium": "^1.43.0"
+    "async": "^2.6.0",
+    "cesium": "^1.43.0",
+    "findit": "^2.0.0"
   }
 }
