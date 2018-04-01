@@ -70,29 +70,28 @@ function createTileset()
     tileset.root.refine = 'ADD';
     tileset.root.children = [];
 
-    const isDirectory = source => fs.lstatSync(source).isDirectory();
-    var directories = fs.readdirSync(ROOT_DIR).map(name => path.join(ROOT_DIR, name)).filter(isDirectory);
-
-    for (var i = 0; i < directories.length; ++i) {
-      var dir = directories[i];
-      var dirname = path.dirname(dir);
-      var name = path.basename(dir);
-
-      var data = fs.readFileSync(path.join(dir, name + '.meta'), {encoding: 'utf-8'});
+    var finder = find(ROOT_DIR);
+    finder.on('file', function(file, stat) {
+      if (path.extname(file) != '.meta') { return; }
+      var data = fs.readFileSync(file, {encoding: 'utf-8'});
       if (data) {
         var child = {};
         child.boundingVolume = {'box': [0,0,0,10,0,0,0,10,0,0,0,10]};
         var meta = JSON.parse(data);
         child.transform = meta.transform;
         child.geometricError = 100;
-        child.content = {'url': path.join(name, name + '.b3dm')};
+
+        var relative = path.relative(ROOT_DIR, file);
+        var childPath = path.join(path.join(path.dirname(relative), path.basename(relative, '.meta')));
+        child.content = {'url': childPath + '.b3dm'};
 
         tileset.root.children.push(child);
-
       }
-    }
+    });
 
-    fs.writeFileSync(path.join(ROOT_DIR, 'tileset.json'), JSON.stringify(tileset));
+    finder.on('end', function() {
+      fs.writeFileSync(path.join(ROOT_DIR, 'tileset.json'), JSON.stringify(tileset));
+    });
   });
 }
 
