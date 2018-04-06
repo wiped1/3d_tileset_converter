@@ -46,8 +46,8 @@ const ROOT = process.argv[2];
 const ROOT_DIR = path.dirname(process.argv[2]);
 const ROOT_META_FILE = path.basename(process.argv[2]);
 
-function createTileset()
-{
+function createTileset() {
+  console.log("Reading file " + process.argv[2]);
   fs.readFile(process.argv[2], {encoding: 'utf-8'}, (err, data) => {
     if (err) {
       console.log("Error opening file: \n");
@@ -107,7 +107,8 @@ function convertGlbToB3dm(force) {
 
   var filesToConvert = [];
 
-  var finder = find(ROOT);
+  console.log('Scanning ' + ROOT_DIR);
+  var finder = find(ROOT_DIR);
   finder.on('file', function(file, stat) {
     if (path.extname(file) != '.glb') { return; }
     filesToConvert.push(file);
@@ -115,26 +116,30 @@ function convertGlbToB3dm(force) {
 
   var script = process.env.TILES_TOOLS_DIR + '3d-tiles-tools.js';
   finder.on('end', function() {
+    console.log('Running convert on ' + filesToConvert.length + ' files');
     const numberOfProcesses = filesToConvert.length;
     async.eachOfLimit(filesToConvert, PROCESSES, function(file, index, taskEnd) {
-      var args = 'glbToB3dm ' + force + ' -i ' + file
-      + ' -o ' + path.join(path.dirname(file), path.basename(file, '.b3dm'));
+      var output = path.join(path.dirname(file), path.basename(file, '.glb')) + '.b3dm';
+      var args = 'glbToB3dm ' + force + ' -i ' + file + ' -o ' + output;
 
-      console.log("Spawning node process id: " + index + "/" + numberOfProcesses);
+      console.log("Spawning conversion process id: " + index + "/" + numberOfProcesses);
+      // TODO add verbose flag
+      console.log("  file: " + file);
+      console.log("  output: " + output);
       proc = child_process.spawn('node', (script + " " + args).split(" "), {
         encoding: 'utf-8'
       });
 
       proc.stdout.on('data', (data) => {
-        console.log("Process " + index + ": " + data.toString());
+        console.log("Conversion process " + index + ": " + data.toString());
       });
 
       proc.stderr.on('data', (data) => {
-        console.log("Process " + index + ": " + data.toString());
+        console.log("Conversion process " + index + ": " + data.toString());
       });
 
       proc.on('close', (code) => {
-        console.log("Process " + index + ": ended with code: " + code);
+        console.log("Conversion process " + index + ": ended with code: " + code);
         taskEnd();
       });
     },
@@ -147,10 +152,12 @@ function convertGlbToB3dm(force) {
 }
 
 if (TASKS.tileset) {
+  console.log("Running `tileset` task");
   createTileset();
 }
 
 if (TASKS.convert) {
+  console.log("Running `convert` task, with `force` set to " + TASKS.force);
   convertGlbToB3dm(TASKS.force);
 }
 
