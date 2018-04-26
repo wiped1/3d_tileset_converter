@@ -12,3 +12,6 @@ Use `export TILES_TOOLS_DIR=~/Downloads/3d-tiles-tools/tools/bin/` (with trailin
 
 # Usage 
 Run `node index.js` to display help message.
+
+# License
+Licensed under MIT license (see [LICENSE.md](LICENSE.md))
