@@ -46,6 +46,59 @@ const ROOT = process.argv[2];
 const ROOT_DIR = path.dirname(process.argv[2]);
 const ROOT_META_FILE = path.basename(process.argv[2]);
 
+function defaultBounds() {
+  return {
+    x: {min: 0, max: 1},
+    y: {min: 0, max: 1},
+    z: {min: 0, max: 1}
+  };
+}
+
+function boundsMinMax(current, boundsMeta) {
+  if (boundsMeta === undefined)
+    return;
+
+  newMinMax = (oldPlane, newPlane) => {
+    if (oldPlane.min > newPlane.min)
+      oldPlane.min = newPlane.min;
+    if (oldPlane.max < newPlane.max)
+      oldPlane.max = newPlane.max;
+  }
+
+  newMinMax(current.x, boundsMeta.x)
+  newMinMax(current.y, boundsMeta.y)
+  newMinMax(current.z, boundsMeta.z)
+}
+
+function getBoundingVolume(bounds) {
+  /*
+    `box` bounding volume is an array of 12 numbers
+    First three elements define x, y, z position.
+    Next three elements define x-axis position, and half-length of the box in x-direction
+    Same goes for next 3 elements, that describe y-axis position, and half length of the box in y-direction
+    Last 3 elements are the same, but for z-axis.
+  */
+  if (bounds === undefined)
+    bounds = defaultBounds()
+
+  var position = [0, 0, 0];
+
+  getHalfLength = plane => (plane.max - plane.min) / 2;
+
+  xHalfLength = Math.max(1, getHalfLength(bounds.x));
+  yHalfLength = Math.max(1, getHalfLength(bounds.y));
+  zHalfLength = Math.max(1, getHalfLength(bounds.z));
+
+  var xAxis = [xHalfLength, 0          , 0          ];
+  var yAxis = [0          , yHalfLength, 0          ];
+  var zAxis = [0          , 0          , zHalfLength];
+
+  // adjust z position based on height
+  position[2] = zHalfLength;
+
+  return [].concat(position, xAxis, yAxis, zAxis)
+}
+
 function createTileset() {
   console.log("Reading file " + process.argv[2]);
   fs.readFile(process.argv[2], {encoding: 'utf-8'}, (err, data) => {
@@ -59,16 +112,17 @@ function createTileset() {
 
     var tileset = {};
     tileset.asset = {'version': '1.0'};
-    tileset.geometricError = 6000;
+    tileset.geometricError = root_meta.geometricError;
 
     tileset.root = {};
     var center = Cesium.Cartesian3.fromDegrees(root_meta.lon, root_meta.lat);
     var transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
-    tileset.root.boundingVolume = {'box': [0,0,0,10,0,0,0,10,0,0,0,10]};
     tileset.root.transform = Cesium.Matrix4.toArray(transform);
-    tileset.root.geometricError = 6000;
+    tileset.root.geometricError = root_meta.geometricError;
     tileset.root.refine = 'ADD';
     tileset.root.children = [];
+
+    var childrenBounds = defaultBounds()
 
     var finder = find(ROOT_DIR);
     finder.on('file', function(file, stat) {
@@ -76,10 +130,11 @@ function createTileset() {
       var data = fs.readFileSync(file, {encoding: 'utf-8'});
       if (data) {
         var child = {};
-        child.boundingVolume = {'box': [0,0,0,10,0,0,0,10,0,0,0,10]};
         var meta = JSON.parse(data);
         child.transform = meta.transform;
-        child.geometricError = 100;
+        child.boundingVolume = {'box': getBoundingVolume(meta.bounds) }
+
+        boundsMinMax(childrenBounds, meta.bounds);
 
         var relative = path.relative(ROOT_DIR, file);
         var childPath = path.join(path.join(path.dirname(relative), path.basename(relative, '.meta')));
@@ -90,6 +145,8 @@ function createTileset() {
     });
 
     finder.on('end', function() {
+      tileset.root.boundingVolume = {'box': getBoundingVolume(childrenBounds)};
+
       fs.writeFileSync(path.join(ROOT_DIR, 'tileset.json'), JSON.stringify(tileset));
     });
   });
