@@ -93,9 +93,6 @@ function getBoundingVolume(bounds) {
   var yAxis = [0          , yHalfLength, 0          ];
   var zAxis = [0          , 0          , zHalfLength];
 
-  // adjust z position based on height
-  position[2] = zHalfLength;
-
   return [].concat(position, xAxis, yAxis, zAxis)
 }
 
